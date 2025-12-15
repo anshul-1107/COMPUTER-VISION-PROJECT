@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Women's Safety Surveillance System</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --primary: #8b5cf6;
+            --accent: #ec4899;
+            --text: #f8fafc;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            background-image:
+                radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
+                radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%),
+                radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 20px;
+            height: 90vh;
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            margin: 0;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2rem;
+        }
+
+        .video-feed {
+            background: var(--card-bg);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .video-feed img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .sidebar {
+            background: var(--card-bg);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .status-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .status-card.alert {
+            border-left-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .log-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            font-size: 0.9rem;
+        }
+
+        .log-item {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #94a3b8;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border: none;
+            padding: 12px;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: scale(1.02);
+        }
+
+        .live-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #ef4444;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>NIRBHAYA AI</h1>
+        <div>
+            <span>Status: </span>
+            <span style="color: #4ade80; font-weight: bold;">Active Monitoring</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="video-feed">
+            <div class="live-badge">LIVE</div>
+            <!-- The Image source refers to the Flask route -->
+            <img src="{{ url_for('video_feed') }}" alt="Surveillance Feed">
+        </div>
+
+        <div class="sidebar">
+            <div class="status-card">
+                <h3>System Health</h3>
+                <p>Camera: Online</p>
+                <p>AI Model: Active</p>
+                <p>Network: Secure</p>
+            </div>
+
+            <div class="status-card alert">
+                <h3>Recent Alerts</h3>
+                <div id="alert-box">No active threats detected.</div>
+            </div>
+
+            <h3>Activity Log</h3>
+            <div class="log-container" id="log-container">
+                <div class="log-item">System initialized...</div>
+                <div class="log-item">Connecting to secure server...</div>
+                <div class="log-item">Monitoring started.</div>
+            </div>
+
+            <button class="btn" onclick="alert('Emergency Alert Triggered Manually!')">TRIGGER EMERGENCY SOS</button>
+        </div>
+    </div>
+
+    <script>
+        function updateStatus() {
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    const logContainer = document.getElementById('log-container');
+                    const alertBox = document.getElementById('alert-box');
+
+                    // Update Status text logic if needed
+
+                    // Clear and Repopulate Logs (Simplistic approach)
+                    logContainer.innerHTML = '';
+                    if (data.logs.length === 0) {
+                        logContainer.innerHTML = '<div class="log-item">System active. No recent threats.</div>';
+                        alertBox.innerText = "No active threats detected.";
+                        alertBox.parentElement.classList.remove('alert-active'); // Toggle style if needed
+                    } else {
+                        // Show most recent as the alert
+                        alertBox.innerText = data.logs[0].message + " at " + data.logs[0].timestamp;
+
+                        data.logs.forEach(log => {
+                            const div = document.createElement('div');
+                            div.className = 'log-item';
+                            div.style.color = '#ef4444'; // Red for alerts
+                            div.innerText = `[${log.timestamp}] ${log.message}`;
+                            logContainer.appendChild(div);
+                        });
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+
+        // Poll every 1 second
+        setInterval(updateStatus, 1000);
+    </script>
+
+</body>
+
+</html>

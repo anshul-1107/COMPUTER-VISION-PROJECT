@@ -1,0 +1,10 @@
+opencv-python
+deepface
+tf-keras
+flask
+numpy
+pillow
+twilio
+mediapipe
+python-dotenv
+streamlit
