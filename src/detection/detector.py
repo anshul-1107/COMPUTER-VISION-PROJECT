@@ -8,15 +8,8 @@ import numpy as np
 
 class SurveillanceSystem:
     def __init__(self):
-        # Open camera (try 0, then 1 if 0 fails)
-        self.camera = cv2.VideoCapture(0)
-        
-        # Resolution optimization (Downscale for speed)
-        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        
-        if not self.camera.isOpened():
-             self.camera = cv2.VideoCapture(1)
+        # Camera is now handled by WebRTC in the frontend
+        # We just initialize detectors and state
              
         self.notifier = Notifier()
         self.gesture_detector = GestureDetector()
@@ -30,12 +23,11 @@ class SurveillanceSystem:
         
         # Threat emotions - User requested ONLY 'fear' context
         self.threat_emotions = ['fear'] 
-        
-    def get_processed_frame(self):
-        success, frame = self.camera.read()
-        if not success:
-            return None
-            
+
+    def process_frame(self, frame):
+        """
+        Process a single frame from any source (WebRTC or Local)
+        """
         self.frame_count += 1
         
         # 1. Gesture Detection (Fast - Every Frame)
@@ -96,13 +88,6 @@ class SurveillanceSystem:
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
         return frame
-
-    def get_frame(self):
-        frame = self.get_processed_frame()
-        if frame is None:
-            return None
-        ret, jpeg = cv2.imencode('.jpg', frame)
-        return jpeg.tobytes()
 
     def __del__(self):
         if self.camera.isOpened():

@@ -7,4 +7,6 @@ pillow
 twilio
 mediapipe
 python-dotenv
+python-dotenv
 streamlit
+streamlit-webrtc
