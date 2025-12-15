@@ -1,55 +1,64 @@
-import cv2
-import mediapipe as mp
-import math
 import time
+import math
+import numpy as np
 
 class MotionDetector:
     def __init__(self):
-        self.mp_pose = mp.solutions.pose
-        self.pose = self.mp_pose.Pose(
-            static_image_mode=False,
-            model_complexity=1, # 0=Fast, 1=Balanced, 2=Accurate
-            smooth_landmarks=True,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5
-        )
-        
-        # Tracking state
-        self.prev_hip_x = None
+        self.prev_landmarks = None
         self.prev_time = time.time()
-        self.speed_threshold = 0.5 # Normalized coordinates per second (needs tuning)
+        # Thresholds
+        self.RUNNING_THRESHOLD = 0.8 # Normalized distance per second
+        self.LEAN_THRESHOLD = 60 # Degrees
         
-    def detect_distress(self, frame):
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self.pose.process(rgb_frame)
+    def detect(self, landmarks):
+        """
+        Input: MediaPipe Pose Landmarks
+        Output: (is_running, velocity_score, lean_angle)
+        """
+        if not landmarks:
+            return False, 0.0, 90.0
+            
+        current_time = time.time()
+        dt = current_time - self.prev_time
         
-        status = None
+        # Landmarks of interest (Hips)
+        # 23: Left Hip, 24: Right Hip, 11: Left Shoulder, 12: Right Shoulder
+        left_hip = landmarks[23]
+        right_hip = landmarks[24]
         
-        if results.pose_landmarks:
-            landmarks = results.pose_landmarks.landmark
+        # Calculate Centroid of Body (Hips)
+        cx = (left_hip.x + right_hip.x) / 2
+        cy = (left_hip.y + right_hip.y) / 2
+        
+        velocity = 0.0
+        
+        if self.prev_landmarks and dt > 0:
+            # Calculate displacement
+            # We focus on Horizontal movement mainly for running across screen
+            # But calculating Euclidean distance is safer
+            prev_cx = self.prev_landmarks['cx']
+            prev_cy = self.prev_landmarks['cy']
             
-            # 1. Calculate Velocity (using Hip center)
-            # Average of left (23) and right (24) hip
-            current_hip_x = (landmarks[23].x + landmarks[24].x) / 2
-            current_time = time.time()
-            
-            if self.prev_hip_x is not None:
-                dt = current_time - self.prev_time
-                if dt > 0:
-                    dx = abs(current_hip_x - self.prev_hip_x)
-                    speed = dx / dt
-                    
-                    # Check threshold (Simple heuristic)
-                    if speed > self.speed_threshold:
-                        # 2. Check Body Lean (Optional refinement)
-                        # Nose (0) vs Mid-Hip
-                        nose_x = landmarks[0].x
-                        
-                        # Forward lean detection (simple relative X check)
-                        # If running fast, this usually triggers
-                        status = "RUNNING (High Speed)"
-            
-            self.prev_hip_x = current_hip_x
-            self.prev_time = current_time
-            
-        return status, results.pose_landmarks
+            dist = math.sqrt((cx - prev_cx)**2 + (cy - prev_cy)**2)
+            velocity = dist / dt
+        
+        # Calculate Body Lean (Torso angle relative to vertical)
+        # Mid-Shoulder
+        sx = (landmarks[11].x + landmarks[12].x) / 2
+        sy = (landmarks[11].y + landmarks[12].y) / 2
+        
+        # Vector from Hip to Shoulder
+        dy = sy - cy
+        dx = sx - cx
+        
+        # Angle in degrees (90 is upright, <60 is leaning forward)
+        angle_rad = math.atan2(abs(dy), abs(dx))
+        angle_deg = math.degrees(angle_rad)
+        
+        # Update State
+        self.prev_landmarks = {'cx': cx, 'cy': cy}
+        self.prev_time = current_time
+        
+        is_running = velocity > self.RUNNING_THRESHOLD
+        
+        return is_running, velocity, angle_deg
